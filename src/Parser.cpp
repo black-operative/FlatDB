@@ -97,7 +97,7 @@ void Parse::Create() {
 		if (Tokens.size() < 3) { throw ERROR_CODE::TABLE_EMPTY;     }
 		if (Tokens.size() < 5) { throw ERROR_CODE::FILE_PATH_EMPTY; }
 
-		auto itr = KW_LOOKUP_TABLE.find(Tokens[3]);
+		auto itr = KW_LOOKUP_TABLE.find(To_Lower(Tokens[3]));
 		if (
 			itr == KW_LOOKUP_TABLE.end() || 
 			itr->second != KEYWORD::FROM
@@ -215,8 +215,11 @@ void Parse::Insert() {
 		To_Lower(Tokens[2]) != "table"
 	) { throw ERROR_CODE::SYNTAX_TYPE; }
 
-	if (KW_LOOKUP_TABLE.at(Tokens[4]) != KEYWORD::VALUES)
-		throw ERROR_CODE::SYNTAX_VALUE;
+	auto kw_itr = KW_LOOKUP_TABLE.find(To_Lower(Tokens[4]));
+	if (
+		kw_itr == KW_LOOKUP_TABLE.end() || 
+		kw_itr->second != KEYWORD::VALUES
+	) { throw ERROR_CODE::SYNTAX_VALUE; }
 
 	string table_name = Tokens[3];
 	json record;
@@ -299,9 +302,7 @@ void Parse::Select() {
 				: record[key].dump();  
 
 			bool match = false;
-
-			RELATIONAL_OPS RE_OP = RE_OPS_LOOKUP_TABLE.at(ops);
-			switch (RE_OP) {
+			switch (ops_itr->second) {
 				case RELATIONAL_OPS::EQUALS:         match = (actual == val); break;
 				case RELATIONAL_OPS::NOT_EQUALS:     match = (actual != val); break;
 				case RELATIONAL_OPS::SMALLER:        match = (actual < val);  break;

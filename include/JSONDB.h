@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
+#include <filesystem>
 
 #include <Utils.h>
 
@@ -14,6 +15,8 @@ using std::vector;
 using std::unordered_map;
 
 using json = nlohmann::json;
+
+namespace fs = std::filesystem;
 
 class JSON_DB {
 	private:
@@ -26,19 +29,13 @@ class JSON_DB {
 		static void Sync_Directory(const string& path);
 
 	public:
-		inline string Get_Schema_File() const { return Table_Path + "\\Schema.json"; }
-		inline string Get_Data_File()   const { return Table_Path + "\\Data.json";   }
+		inline string Get_Schema_File() const { return (fs::path(Table_Path) / "Schema.json"); }
+		inline string Get_Data_File()   const { return (fs::path(Table_Path) / "Data.json");   }
 
 		json Read_JSON  (const string&) const;
 		void Write_JSON (const string&, const json&);
 		
-		JSON_DB(const string& path) {
-			if (path.front() != '\\' && path.front() != '/') {
-				Table_Path = string(DATABASE_DIRECTORY) + "\\" + path;
-			} else {
-				Table_Path = string(DATABASE_DIRECTORY) + path;
-			}
-		}
+		JSON_DB(const string& path) : Table_Path(path) {}
 
 		bool Create_Table(const json&);
 
