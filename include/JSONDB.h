@@ -17,10 +17,13 @@ using json = nlohmann::json;
 
 class JSON_DB {
 	private:
-		string		   Table_Path;
-		mutable mutex  File_Mutex;
+		string		  Table_Path;
+		mutable mutex File_Mutex;
 
 		void Ensure_Directory_Exists() const;
+
+		static void Sync_File 	  (const string& path);
+		static void Sync_Directory(const string& path);
 
 	public:
 		inline string Get_Schema_File() const { return Table_Path + "\\Schema.json"; }

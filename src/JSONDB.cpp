@@ -1,6 +1,15 @@
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <filesystem>
+#include <system_error>
+
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <fcntl.h>
+    #include <unistd.h>
+#endif
 
 #include <Error.h>
 #include <JSONDB.h>
@@ -12,6 +21,54 @@ using std::ofstream;
 using std::lock_guard;
 
 namespace fs = std::filesystem;
+
+void JSON_DB::Sync_File(const string& path) {
+	#ifdef _WIN32
+		HANDLE h = CreateFileA(
+			path.c_str(),
+			GENERIC_WRITE,
+			FILE_SHARE_READ| FILE_SHARE_WRITE,
+			nullptr, 
+			OPEN_EXISTING, 
+			FILE_ATTRIBUTE_NORMAL, 
+			nullptr
+		);
+
+		if (h == INVALID_HANDLE_VALUE) throw ERROR_CODE::FILE_CANNOT_OPEN;
+		
+		if (!FlushFileBuffers(h)) { 
+			CloseHandle(h); 
+			throw ERROR_CODE::FILE_CANNOT_OPEN; 
+		}
+		
+		CloseHandle(h);
+	
+	#else
+		int fd = open(path.c_str(), O_RDWR);
+		
+		if (fd == - 1) throw ERROR_CODE::FILE_CANNOT_OPEN;
+		
+		if (fsync(fd) != 0) {
+			close(fd);
+			throw ERROR_CODE::FILE_CANNOT_OPEN;
+		}
+
+		close(fd);
+
+	#endif	
+}
+
+void JSON_DB::Sync_Directory(const string& path) {
+	#ifndef _WIN32
+		int fd = open(path.c_str(), O_RDONLY);
+
+		if (fd == -1) return;
+
+		fsync(fd);
+		close(fd);
+
+	#endif
+}
 
 // Read JSON from file
 json JSON_DB::Read_JSON(const string& file_name) const {
@@ -38,11 +95,29 @@ void JSON_DB::Write_JSON(const string& file_name, const json& json_data) {
 
 	Ensure_Directory_Exists();
 
-	ofstream file(file_name);
-	if (!file.is_open()) throw ERROR_CODE::FILE_CANNOT_OPEN;
+	fs::path target = file_name;
+	fs::path temp_path = target;
+	temp_path += ".tmp";
+	{
+		ofstream file(temp_path, std::ios::binary | std::ios::trunc);
+		if (!file.is_open()) throw ERROR_CODE::FILE_CANNOT_OPEN;	
+		
+		file << json_data.dump(4);
+		file.flush();
+		if (!file.good()) throw ERROR_CODE::FILE_CANNOT_OPEN;
+	}
+	
+	Sync_File(temp_path);
 
-	file << json_data.dump(4);
-	file.close();
+	std::error_code code;
+	fs::rename(temp_path, target, code);
+	if (code) throw ERROR_CODE::FILE_CANNOT_OPEN;
+
+	Sync_Directory(
+		target.parent_path().empty()
+			? "."
+			: target.parent_path().string()
+	);
 }
 
 // Create directories if they don't exist
