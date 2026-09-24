@@ -1,16 +1,72 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
+#include <stdexcept>
+#include <filesystem>
 #include <unordered_map>
 
-#include <Utils.h> 
+#if defined(_WIN32)
+	#include <windows.h>
+#elif defined(__APPLE__)
+	#include <climits>
+	#include <mach-o/dyld.h>
+#endif
+
+#include <Utils.h>
 
 using std::max;
+using std::cerr;
 using std::cout;
 using std::vector;
 using std::string;
 using std::unordered_map;
+
+namespace fs = std::filesystem;
+
+// Returns the absolute path of the currently running executable.
+// Throws std::runtime_error if the platform-specific lookup fails.
+static fs::path Get_Executable_Path() {
+	#if defined(_WIN32)
+		wchar_t buffer[MAX_PATH];
+		DWORD len = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+		if (len == 0 || len == MAX_PATH) {
+			throw std::runtime_error("GetModuleFileNameW failed");
+		}
+		return fs::path(buffer);
+	#elif defined(__APPLE__)
+		char buffer[PATH_MAX];
+		uint32_t size = sizeof(buffer);
+		if (_NSGetExecutablePath(buffer, &size) != 0) {
+			throw std::runtime_error("_NSGetExecutablePath: buffer too small");
+		}
+		return fs::canonical(buffer);
+	#else
+		// Linux / other POSIX: /proc/self/exe is a symlink to the running binary.
+		std::error_code ec;
+		fs::path exe_path = fs::read_symlink("/proc/self/exe", ec);
+		if (ec) {
+			throw std::runtime_error("Could not read /proc/self/exe: " + ec.message());
+		}
+		return exe_path;
+#endif
+}
+
+// Resolves the directory all databases are stored under:
+// "<directory containing this binary>/data". Falls back to
+// "<current working directory>/data" if the executable's own
+// path cannot be determined for some reason.
+static string Compute_Database_Directory() {
+	try {
+		return (Get_Executable_Path().parent_path() / "data").string();
+	} catch (const std::exception& e) {
+		cerr << "\nWarning: COULD NOT RESOLVE EXECUTABLE PATH, FALLING BACK TO CURRENT DIRECTORY [" << e.what() << "]\n";
+		return (fs::current_path() / "data").string();
+	}
+}
+
+const string DATABASE_DIRECTORY = Compute_Database_Directory();
 
 void Print_Help() {
 	constexpr auto RESET = "\033[0m";
