@@ -1,98 +1,24 @@
-// #include <iostream>
-// #include <string>
-// #include <algorithm>
-
-// #include <Error.h>
-// #include <Parser.h>
-// #include <Utils.h>
-
-// using std::cin;
-// using std::cout;
-// using std::cerr;
-// using std::endl;
-// using std::string;
-// using std::getline;
-// using std::exception;
-// using std::transform;
-// using std::runtime_error;
-
-// int main() {
-//     Parse parser;
-//     string cli_args;
-
-//     while (true) {
-//         try {
-//             cin.clear();
-//             cin.sync();
-//             cout << FLATDB_PROMPT;
-//             getline(cin, cli_args);
-//             cin.clear();
-//             cin.sync();
-
-//             if (cli_args.empty()) continue;
-
-//             size_t first_space = cli_args.find(' ');
-//             string first_word = (first_space == string::npos) ? cli_args : cli_args.substr(0, first_space);
-
-//             // Lowercase just the first word
-//             transform(first_word.begin(), first_word.end(), first_word.begin(), ::tolower);
-
-//             if (OP_LOOKUP_TABLE.find(first_word) != OP_LOOKUP_TABLE.end()) {
-//                 OPERATION op = OP_LOOKUP_TABLE.at(first_word);
-
-//                 if (op == OPERATION::EXIT) {
-//                     char Ch = 0;
-//                     cout << "\nAre you sure you want to exit? (Y/n): ";
-//                     cin.get(Ch);
-//                     cin.ignore();
-
-//                     if (Ch == 'y' || Ch == 'Y' || Ch == '\n') {
-//                         cout << "Clear Screen is enabled, proceeding will remove all terminal content, proceed? (y/N): ";
-//                         cin.get(Ch);
-//                         cin.ignore();
-
-//                         if (Ch == 'y' || Ch == 'Y') {
-//                             cout << SCREEN_CLEAR_COMMAND;
-//                         }
-
-//                         cout << "Thank you for using FlatDB.\n";
-//                         break;
-//                     }
-
-//                     continue;
-//                 } else if (op == OPERATION::HELP) {
-//                     Print_Help();
-//                     continue;
-//                 }
-//             }
-
-//             // Parse & execute
-//             parser.Execute(cli_args);
-//         } catch (const ERROR_CODE& e) {
-//             cerr << "[ERROR] " << GET_ERROR_MESSAGE(e) << endl;
-//         } catch (const runtime_error& e) {
-//             cerr << "[RUNTIME ERROR] " << e.what() << endl;
-//         } catch (const exception& e) {
-//             cerr << "[EXCEPTION] " << e.what() << endl;
-//         } catch (...) {
-//             cerr << "[UNKNOWN ERROR] Something went wrong. : " << cli_args << endl;
-//         }
-//     }
-
-//     return 0;
-// }
-
 #include <iostream>
 #include <cassert>
 #include <fstream>
+#include <sstream>
+#include <algorithm>
 #include <Parser.h>
 #include <Error.h>
+#include <Utils.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
+using std::string;
+using std::getline;
+using std::exception;
+using std::transform;
+using std::runtime_error;
+using std::istringstream;
 
 static void Run_Command(Parse& parser, const std::string& cmd) {
 	try {
@@ -107,19 +33,19 @@ static void Test_Parse_Class() {
 	Parse parser;
 
 	// ---- CREATE DATABASE ----
-	// Run_Command(parser, "CREATE DATABASE TestDB");
+	Run_Command(parser, "CREATE DATABASE TestDB");
 
 	// // ---- USE DATABASE ----
-	// Run_Command(parser, "USE DATABASE TestDB");
+	Run_Command(parser, "USE DATABASE TestDB");
 
 	// ---- CREATE TABLE ----
 	// Prepare schema JSON
 	std::ofstream schemaFile("test_schema.json");
 	schemaFile << R"({
-		"name": "string",
-		"age": "int",
-		"salary": "float"
-	})";
+	"name": "string",
+	"age": "int",
+	"salary": "float"
+})";
 	schemaFile.close();
 
 	Run_Command(parser, "CREATE TABLE tb1 FROM test_schema.json");
@@ -152,9 +78,81 @@ static void Test_Parse_Class() {
 	cout << "\nAll Parse commands tested.\n";
 }
 
-int main() {
-	cout << "Starting tests for Parse class...\n";
-	Test_Parse_Class();
-	cout << "\nAll tests completed successfully.\n";
+static int Run_Interactive_Shell() {
+	Parse parser;
+	string cli_args;
+
+	cout << "FlatDB v" << FLATDB_VERSION << " - type HELP for a list of commands, EXIT to quit.\n";
+
+	while (true) {
+		try {
+			cout << FLATDB_PROMPT;
+
+			if (!getline(cin, cli_args)) {
+				cout << "\nGoodbye.\n";
+				break;
+			}
+
+			if (cli_args.empty()) continue;
+
+			// Extract the first word the same way Parse::Tokenize does,
+			// so leading whitespace doesn't defeat the lookup below.
+			istringstream first_line(cli_args);
+			string first_word;
+			first_line >> first_word;
+			transform(first_word.begin(), first_word.end(), first_word.begin(), ::tolower);
+
+			auto op_itr = OP_LOOKUP_TABLE.find(first_word);
+			if (op_itr != OP_LOOKUP_TABLE.end()) {
+				if (op_itr->second == OPERATION::EXIT) {
+					string response;
+
+					cout << "\nAre you sure you want to exit? (Y/n): ";
+					getline(cin, response);
+					if (
+						!response.empty()   &&
+						response[0] != 'y'  &&
+						response[0] != 'Y'
+					) { continue; }
+
+					cout << "Clear Screen is enabled, proceeding will remove all terminal content, proceed? (y/N): ";
+					getline(cin, response);
+					if (
+						!response.empty() &&
+						(response[0] == 'y' || response[0] == 'Y')
+					) { cout << SCREEN_CLEAR_COMMAND; }
+
+					cout << "Thank you for using FlatDB.\n";
+					break;
+				} else if (op_itr->second == OPERATION::HELP) {
+					Print_Help();
+					continue;
+				}
+			}
+
+			// Parse & execute
+			parser.Execute(cli_args);
+		} catch (const ERROR_CODE& e) {
+			cerr << "[ERROR] " << GET_ERROR_MESSAGE(e) << endl;
+		} catch (const runtime_error& e) {
+			cerr << "[RUNTIME ERROR] " << e.what() << endl;
+		} catch (const exception& e) {
+			cerr << "[EXCEPTION] " << e.what() << endl;
+		} catch (...) {
+			cerr << "[UNKNOWN ERROR] Something went wrong. : " << cli_args << endl;
+		}
+	}
+
 	return 0;
+}
+
+int main(int argc, char* argv[]) {
+	if (argc > 1 && string(argv[1]) == "--test") {
+		cout << "Starting tests for Parse class...\n";
+		Test_Parse_Class();
+		cout << "\nAll tests completed successfully.\n";
+		return 0;
+	}
+
+	return Run_Interactive_Shell();
 }
