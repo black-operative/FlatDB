@@ -115,7 +115,7 @@ void Parse::Create() {
 			response[0] == 'y'
 		) { return; }
 
-		fs::path candidate = Resolve_DB_Path(DATABASE_DIRECTORY, Tokens[2]);
+		fs::path candidate = Resolve_DB_Path(Current_DB, Tokens[2]);
 		JSON_DB Database(candidate);
 		if (
 			!Database.Create_Table(
