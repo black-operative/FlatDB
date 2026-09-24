@@ -31,7 +31,8 @@ const unordered_map<string, OPERATION> OP_LOOKUP_TABLE = {
     { "select",   OPERATION::SELECT   },
     { "update",   OPERATION::UPDATE   },
     { "help",	  OPERATION::HELP	  },
-    { "exit",	  OPERATION::EXIT	  }
+    { "exit",	  OPERATION::EXIT	  },
+    { "quit",	  OPERATION::EXIT	  }
 };
 
 enum class KEYWORD {
