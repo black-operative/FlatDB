@@ -11,7 +11,9 @@ enum class ERROR_CODE {
     DIRECTORY_EMPTY,
     DIRECTORY_CREATE,
     DIRECTORY_WHERE,
-    
+
+    DATABASE_NSELECT,
+
     TABLE_EMPTY,
     TABLE_CREATE,
     TABLE_WHERE,
@@ -32,16 +34,18 @@ enum class ERROR_CODE {
 
 inline string GET_ERROR_MESSAGE(ERROR_CODE e) {
     switch (e) {
-        case ERROR_CODE::FILE_PATH_EMPTY:  return "[File] : Path is empty";                    break;
-        case ERROR_CODE::FILE_CANNOT_OPEN: return "[File] : File cannot be opened";            break;
+        case ERROR_CODE::FILE_PATH_EMPTY:  return "[File] : Path is empty";                                                  break;
+        case ERROR_CODE::FILE_CANNOT_OPEN: return "[File] : File cannot be opened";                                          break;
         
-        case ERROR_CODE::TABLE_CREATE:     return "[Table] : Table cannot be created";         break;
-        case ERROR_CODE::TABLE_EMPTY:      return "[Table] : Name is empty";                   break;
-        case ERROR_CODE::TABLE_WHERE:      return "[Table] : Table cannot be found";           break;
-        case ERROR_CODE::TABLE_INSERT:     return "[Table] : Record Insertion failed";         break;
+        case ERROR_CODE::TABLE_CREATE:     return "[Table] : Table cannot be created";                                       break;
+        case ERROR_CODE::TABLE_EMPTY:      return "[Table] : Name is empty";                                                 break;
+        case ERROR_CODE::TABLE_WHERE:      return "[Table] : Table cannot be found";                                         break;
+        case ERROR_CODE::TABLE_INSERT:     return "[Table] : Record Insertion failed";                                       break;
+
+        case ERROR_CODE::DATABASE_NSELECT: return "[Database] : No Database is selected. Run : USE DATABASE <name>";         break;
         
         case ERROR_CODE::SYNTAX_TYPE:      return "[Syntax] : Undentified Type";                                             break;
-        case ERROR_CODE::SYNTAX_CREATE:    return "[Syntax] : Expected format : CREATE TABLE / DATABASe <name>";             break;
+        case ERROR_CODE::SYNTAX_CREATE:    return "[Syntax] : Expected format : CREATE TABLE / DATABASE <name>";             break;
         case ERROR_CODE::SYNTAX_FROM:      return "[Syntax] : Expected format : CREATE TABLE <> FROM <>";                    break;
         case ERROR_CODE::SYNTAX_INSERT:    return "[Syntax] : Expected format : INSERT INTO TABLE <> VALUES <>";             break;
         case ERROR_CODE::SYNTAX_VALUE:     return "[Syntax] : Expected format : VALUES <key1>=<val1> <key2>=<val2> ...";     break;
@@ -52,9 +56,9 @@ inline string GET_ERROR_MESSAGE(ERROR_CODE e) {
         case ERROR_CODE::SYNTAX_SET:       return "[Syntax] : Expected format : SET key1=val1, key2=val2, ...";              break;
         case ERROR_CODE::SYNTAX_UNKNOWN:   return "[Syntax] : Unknown Operation type encounetered !";                        break;
 
-        case ERROR_CODE::DIRECTORY_EMPTY:  return "[Directory] : Name is empty";               break;
-        case ERROR_CODE::DIRECTORY_CREATE: return "[Directory] : Directory cannot be created"; break;
-        case ERROR_CODE::DIRECTORY_WHERE:  return "[DIrectory] : Directory cannot be found";   break;
+        case ERROR_CODE::DIRECTORY_EMPTY:  return "[Directory] : Name is empty";                                             break;
+        case ERROR_CODE::DIRECTORY_CREATE: return "[Directory] : Directory cannot be created";                               break;
+        case ERROR_CODE::DIRECTORY_WHERE:  return "[DIrectory] : Directory cannot be found";                                 break;
         default:                           return "Unknown Error !";
     }
 }

@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 using std::string;
 using std::vector;
@@ -65,7 +68,8 @@ const unordered_map<string, RELATIONAL_OPS> RE_OPS_LOOKUP_TABLE = {
 
 class Parse {
 	private:
-		string Current_DB;
+		fs::path Current_DB;
+		bool	 DB_Selected = false;
 		vector<string> Tokens;
 
 		void Tokenize(const string&);
