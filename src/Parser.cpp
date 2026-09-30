@@ -115,11 +115,15 @@ void Parse::Create() {
 			response[0] == 'y'
 		) { return; }
 
-		fs::path candidate = Resolve_DB_Path(Current_DB, Tokens[2]);
-		JSON_DB Database(candidate);
+		auto Database = JSON_DB::Get(
+			Resolve_DB_Path(
+				Current_DB, 
+				Tokens[2]
+			)
+		);
 		if (
-			!Database.Create_Table(
-				Database.Read_JSON(Tokens[4])
+			!Database->Create_Table(
+				Database->Read_JSON(Tokens[4])
 			)
 		) { throw ERROR_CODE::TABLE_CREATE; }
 
@@ -152,8 +156,8 @@ void Parse::Truncate() {
 		fs::path t_path = Resolve_DB_Path(Current_DB, Tokens[2]);
 		if (!fs::is_directory(t_path)) { throw ERROR_CODE::TABLE_WHERE; }
 
-		JSON_DB Database(t_path);
-		Database.Write_JSON(Database.Get_Data_File(), json::array());
+		auto Database = JSON_DB::Get(t_path);
+		Database->Write_JSON(Database->Get_Data_File(), json::array());
 
 		cout << "\nTable : [" << Tokens[2] << "] <- [" << Current_DB << "] truncated.\n";
 	}
@@ -246,8 +250,13 @@ void Parse::Insert() {
 		}
 	}
 	
-	JSON_DB Database(Resolve_DB_Path(Current_DB, table_name));
-	if (!Database.Insert_Record(record)) throw ERROR_CODE::TABLE_INSERT;
+	auto Database = JSON_DB::Get(
+		Resolve_DB_Path(
+			Current_DB, 
+			table_name
+		)
+	);
+	if (!Database->Insert_Record(record)) throw ERROR_CODE::TABLE_INSERT;
 	cout << "\nRecord inserted into " << table_name << ".\n";
 }
 
@@ -262,9 +271,13 @@ void Parse::Select() {
 		kw_itr->second != KEYWORD::FROM
 	) { throw ERROR_CODE::SYNTAX_SELECT; }
 
-	string t_name = Tokens[3];
-	JSON_DB Database(Resolve_DB_Path(Current_DB, t_name));
-	auto data = Database.Read_Records();
+	auto Database = JSON_DB::Get(
+		Resolve_DB_Path(
+			Current_DB, 
+			Tokens[3]
+		)
+	);
+	auto data = Database->Read_Records();
 
 	// Simple SELECT * FROM tb1
 	if (Tokens.size() == 4) {
@@ -332,7 +345,6 @@ void Parse::Update() {
 		kw_itr->second != KEYWORD::SET
 	) { throw ERROR_CODE::SYNTAX_UPDATE; }
 
-	string t_name   = Tokens[1];
 	string set_expr = Tokens[3]; // Example: key="value"
 
 	size_t eq_pos = set_expr.find('=');
@@ -372,8 +384,13 @@ void Parse::Update() {
 	if (ops_itr == RE_OPS_LOOKUP_TABLE.end()) throw ERROR_CODE::SYNTAX_OPERATOR;
 
 	// Begin update
-	JSON_DB Database(Resolve_DB_Path(Current_DB, t_name));
-	json data = Database.Read_Records();
+	auto Database = JSON_DB::Get(
+		Resolve_DB_Path(
+			Current_DB, 
+			Tokens[1]
+		)
+	);
+	json data = Database->Read_Records();
 
 	size_t updated_count = 0;
 	for (auto& record : data) {
@@ -408,7 +425,7 @@ void Parse::Update() {
 		}
 	}
 
-	Database.Write_JSON(Database.Get_Data_File(), data);
+	Database->Write_JSON(Database->Get_Data_File(), data);
 	cout << "\n" << updated_count << " record(s) updated.\n";
 }
 

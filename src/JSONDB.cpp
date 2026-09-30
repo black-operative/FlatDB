@@ -22,6 +22,29 @@ using std::lock_guard;
 
 namespace fs = std::filesystem;
 
+// JSON_DB Mutex Registry
+mutex 									 JSON_DB::Registry_Mutex;
+unordered_map<string, weak_ptr<JSON_DB>> JSON_DB::Registry;
+
+JSON_DB::JSON_DB(const string& path) : Table_Path(path) {}
+
+shared_ptr<JSON_DB> JSON_DB::Get(const fs::path &resolved_path) {
+	string key = resolved_path.string();
+
+	lock_guard<mutex> lock(Registry_Mutex);
+
+	auto itr = Registry.find(key);
+	if (itr != Registry.end()) {
+		if (auto existing = itr->second.lock()) {
+			return existing;
+		}
+	}
+
+	auto instance = shared_ptr<JSON_DB>(new JSON_DB(key));
+	Registry[key] = instance;
+	return instance;
+}
+
 void JSON_DB::Sync_File(const string& path) {
 	#ifdef _WIN32
 		HANDLE h = CreateFileA(
